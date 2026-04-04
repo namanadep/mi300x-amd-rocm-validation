@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "mi300x-validation"
+version = "0.1.0"
+description = "Production-readiness validation suite for AMD Instinct MI300X GPU nodes"
+requires-python = ">=3.10"
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=7", "pytest-cov"]
+torch = ["torch>=2.4"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

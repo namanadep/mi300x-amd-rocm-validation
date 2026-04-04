@@ -1,0 +1,47 @@
+{
+  "ServerPort": 9400,
+  "CommonConfig": {
+    "MetricsFieldPrefix": "amd_"
+  },
+  "GPUConfig": {
+    "Fields": [
+      "GPU_NODES_TOTAL",
+      "GPU_PACKAGE_POWER",
+      "GPU_AVERAGE_PACKAGE_POWER",
+      "GPU_EDGE_TEMPERATURE",
+      "GPU_JUNCTION_TEMPERATURE",
+      "GPU_MEMORY_TEMPERATURE",
+      "GPU_HBM_TEMPERATURE",
+      "GPU_GFX_ACTIVITY",
+      "GPU_UMC_ACTIVITY",
+      "GPU_MM_ACTIVITY",
+      "GPU_VCN_ACTIVITY",
+      "GPU_JPEG_ACTIVITY",
+      "GPU_VOLTAGE_VDDGFX",
+      "GPU_VOLTAGE_VDDNB",
+      "GPU_SCLK",
+      "GPU_MCLK",
+      "GPU_FCLK",
+      "GPU_SOCCLK",
+      "GPU_TOTAL_VRAM",
+      "GPU_USED_VRAM",
+      "GPU_FREE_VRAM",
+      "GPU_TOTAL_VISIBLE_VRAM",
+      "GPU_USED_VISIBLE_VRAM",
+      "GPU_FREE_VISIBLE_VRAM",
+      "GPU_TOTAL_GTT",
+      "GPU_USED_GTT",
+      "GPU_FREE_GTT",
+      "GPU_ECC_TOTAL_CORRECTABLE_ERRORS",
+      "GPU_ECC_TOTAL_UNCORRECTABLE_ERRORS",
+      "GPU_PCIE_BANDWIDTH",
+      "GPU_PCIE_REPLAY_COUNT",
+      "GPU_XGMI_NBX_DATA_OUTBOUND",
+      "GPU_XGMI_NBX_DATA_INBOUND",
+      "GPU_POWER_CAP",
+      "GPU_GPU_RESET_METRICS",
+      "GPU_FW_VERSIONS",
+      "GPU_PROCESS_ISOLATION"
+    ]
+  }
+}
