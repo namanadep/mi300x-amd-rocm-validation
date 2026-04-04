@@ -8,6 +8,8 @@
 
 Most HPC portfolios cover NVIDIA only. This repo documents hands-on validation of an **AMD MI300X** cluster from first boot through production sign-off: driver stack, RCCL collectives, memory pressure, sustained thermal, and the AMD GPU Prometheus exporter — the equivalent workflow to what NVIDIA infrastructure engineers do with `dcgmi diag` and DCGM exporters.
 
+This is designed as a **bring-up checklist** — the sequence a platform engineer runs before releasing a node to users, not a synthetic demo.
+
 **Related article:** *AMD MI300X vs NVIDIA H200: I Benchmarked Both — Here Are the Actual Numbers* (Medium, Apr 2026).
 
 ---
@@ -172,6 +174,122 @@ torchrun --nproc_per_node=8 scripts/rccl_bandwidth_test.py
 # 5. RCCL all-reduce correctness (verifies result = sum(1..8) = 36)
 torchrun --nproc_per_node=8 scripts/rccl_allreduce_test.py
 ```
+
+---
+
+## MI300X vs H200 — direct comparison
+
+Both systems were measured by the same engineer on real hardware. Numbers are comparable because the workload (FP32 matmul, AllReduce, peak-load thermal) is identical.
+
+| Metric | **AMD MI300X VF** | **NVIDIA H200 NVL** | Notes |
+|--------|-------------------|---------------------|-------|
+| VRAM per GPU | **192 GB HBM3** | 141 GB HBM3e | MI300X +36% — 70B fp16 model fits on 1 GPU |
+| Peak FP32 TFLOPS | **~94.5** | ~46.5 (NVL) · ~51 (SXM) | Single-GPU, 8192×8192 matmul |
+| AllReduce peak (8 GPU) | **433 GB/s algbw** | ~781 GB/s (NVLink) | NVLink has higher peak; XGMI competitive |
+| AllReduce protocol | XGMI (1 hop, full-mesh) | NVLink 4.0 (NV18) | Both in-chassis; no PCIe fallback needed |
+| Peak power / GPU | 745–750 W | 548 W | MI300X draws more but delivers more FP32 |
+| Peak junction temp | 86°C | 78°C | Both well below throttle threshold |
+| Thermal throttle events | **0** | **0** | Both passed burn-in |
+| Observability exporter | `amd-metrics-exporter :9400` | `dcgm-exporter :9400` | Same port, same Prometheus format |
+| Framework | PyTorch 2.4.1+rocm6.0 | PyTorch 2.5.0 / 2.7.1+cu128 | Code is portable — same `dist.all_reduce` API |
+
+**Key takeaway:** MI300X is the right choice when a single GPU needs to hold a full 70B or 180B model for inference. H200 is the right choice for NVLink-scale AllReduce bandwidth in distributed training.
+
+---
+
+## ROCm stack bring-up checklist
+
+This is the sequence run on `dnd-amd-8gpu-venu-19mar` before the node was declared production-ready. Steps are ordered by dependency.
+
+### Stage 1: System prerequisites
+
+```bash
+# Verify kernel version (6.6+ required for ROCm 6.x; 6.8 confirmed working)
+uname -r          # Expected: 6.8.0-xx-generic
+
+# Add user to render and video groups (required for /dev/dri access)
+sudo usermod -aG render,video $USER
+
+# Verify /dev/kfd and /dev/dri/renderD* exist
+ls -la /dev/kfd /dev/dri/render*
+
+# Check IOMMU mode — AMD recommends passthrough for VM guests, but bare-metal
+# should have it enabled (iommu=pt in kernel command line)
+cat /proc/cmdline | grep iommu
+dmesg | grep -i iommu | head -5
+```
+
+### Stage 2: ROCm installation (Ubuntu 24.04)
+
+```bash
+# Add AMD ROCm repo
+wget https://repo.radeon.com/amdgpu-install/6.4.1/ubuntu/noble/amdgpu-install_6.4.60401-1_all.deb
+sudo dpkg -i amdgpu-install_6.4.60401-1_all.deb
+sudo apt-get update
+
+# Install ROCm + amdgpu driver (includes HIP, hipBLAS, RCCL, rocSPARSE)
+sudo amdgpu-install --usecase=rocm,hip --no-32 -y
+
+# Post-install: verify
+rocm-smi --showallinfo
+rocminfo | grep "gfx942"    # Should appear 8 times for MI300X
+hipconfig --full
+```
+
+### Stage 3: Topology and XGMI validation
+
+```bash
+# Show XGMI link topology — all 8 GPUs should show "XGMI" peer access
+rocm-smi --showtopo
+
+# Verify peer access (should be 1 hop between all pairs on MI300X)
+rocm-smi --showtopoweight
+
+# hipBLAS DGEMM quick test (confirms HBM and compute path end-to-end)
+/opt/rocm/bin/hipblas-bench -f gemm -r d --transpA T --transpB N \
+    -m 5000 -n 5000 -k 5000 --batch_count 1 --iters 10
+```
+
+### Stage 4: PyTorch + RCCL
+
+```bash
+# Install PyTorch ROCm build
+pip install torch==2.4.1 --index-url https://download.pytorch.org/whl/rocm6.0
+
+# Quick RCCL correctness check (all-reduce result must equal sum 1..N)
+torchrun --nproc_per_node=8 scripts/rccl_allreduce_test.py
+
+# RCCL bandwidth sweep
+torchrun --nproc_per_node=8 scripts/rccl_bandwidth_test.py
+```
+
+### Stage 5: Full validation suite
+
+```bash
+# All-in-one health check
+./scripts/gpu-health-check.sh --pytorch
+
+# Performance + stress
+python scripts/performance-stress-check.py
+
+# Expected outputs: 9 report files in results/reports/
+```
+
+---
+
+## Known issues and tuning tips
+
+These are issues encountered on the `dnd-amd-8gpu-venu-19mar` system. Most are also present on typical bare-metal or cloud VM MI300X deployments.
+
+| Issue | Symptom | Fix |
+|-------|---------|-----|
+| **Render group** | `HIP error: hipErrorInvalidDevice` for non-root | `sudo usermod -aG render,video $USER` + logout/login |
+| **IOMMU passthrough** | Poor P2P bandwidth, IOMMU errors in dmesg | Add `iommu=pt` to kernel cmdline in `/etc/default/grub`, then `update-grub` |
+| **Large BAR** | GPU-to-GPU transfers are slower than expected | Enable "Above 4G decoding" and "Re-Size BAR" in BIOS; confirm with `lspci -vvv | grep BAR` |
+| **NUMA placement** | CPU-GPU transfers slow when CPUs on wrong NUMA node | Use `numactl --cpunodebind=0 --membind=0` for GPU 0–3; node 1 for GPU 4–7 |
+| **amdgpu-exporter service** | Prometheus scrape returns empty | Check `/etc/systemd/system/amdgpu-exporter.service`; confirm user has render group |
+| **RCCL timeout on first run** | `Timeout waiting for ncclAllReduce` on first `torchrun` call | Set `NCCL_TIMEOUT=1200` and `RCCL_DEBUG=INFO`; first run initializes XGMI fabric |
+| **rocBLAS cache miss** | Slow first matmul, fast subsequent | ROCm compiles and caches GEMM kernels on first call; use `--warmup` flags in benchmarks |
 
 ---
 
