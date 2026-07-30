@@ -1,4 +1,4 @@
-# Single-GPU VF: rocprof / torch.profiler analysis — MI300X
+# Single-GPU VF: rocprof / torch.profiler analysis on MI300X
 
 **Host:** AMD GPU VM (single Instinct MI300X VF)
 **Date:** 2026-03-26
@@ -7,7 +7,7 @@
 **PyTorch:** 2.4.1+rocm6.0
 **OS:** Ubuntu 24.04.2 LTS, kernel 6.8.0-58-generic
 **GPU:** AMD Instinct MI300X VF (`gfx942` / CDNA3, 191.69 GiB HBM3)
-**Constraint:** 1× VF — no XGMI, no peer-to-peer, PCIe bandwidth applies at host boundary
+**Constraint:** 1× VF, no XGMI, no peer-to-peer; PCIe bandwidth applies at host boundary
 
 ---
 
@@ -44,7 +44,7 @@ VRAM GiB: 191.69
 
 ## 2. Baseline: FP32 GEMM throughput
 
-**Script:** `scripts/matmul_bench.py` — 8192×8192 FP32 matmul, 10 warm-up + 50 timed iterations.
+**Script:** `scripts/matmul_bench.py`, 8192×8192 FP32 matmul, 10 warm-up + 50 timed iterations.
 
 ```bash
 python3 scripts/matmul_bench.py
@@ -102,9 +102,9 @@ Self CUDA time total: 6.922ms
 | Observation | Meaning |
 |-------------|---------|
 | Kernel: `Cijk_Ailk_Bljk_SB_MT256x64x16_MI32x32x2x1_SN_1LDSB1_...` | rocBLAS GEMM kernel, CDNA3 matrix instruction path (`MI32x32x2x1`) |
-| GPU time 4× matmul: 6.922 ms | 1.730 ms / call at 4096² — consistent with hipBLAS SGEMM path |
+| GPU time 4× matmul: 6.922 ms | 1.730 ms / call at 4096², consistent with hipBLAS SGEMM path |
 | CPU time >> GPU time: 71 ms vs 7 ms | Python/HIP launch overhead dominates; on 1 VF this is expected without persistent kernels |
-| `hipModuleLoadData`: 14.8 ms | First-call JIT compile cost — amortised after warmup |
+| `hipModuleLoadData`: 14.8 ms | First-call JIT compile cost, amortised after warmup |
 
 **Key read for AMD reviewers:** the `Cijk_Ailk_Bljk_SB_MT256x64x16` naming encodes the tile shape (256×64, 16-deep K-loop) and matrix instruction (`MI32x32x2x1` = MFMA 32×32 with 2×1 wave grouping). Tuning problem size to match this tile boundary reduces padding waste.
 
@@ -158,7 +158,7 @@ speedup FP32/FP16: 4.20x
 | Configuration | Matrix size | Time (ms) | Throughput (TFLOPS) | Notes |
 |---------------|------------|-----------|---------------------|-------|
 | **FP32 baseline** | 8192×8192 | 12.141 | **90.56** | `aten::mm` via rocBLAS SGEMM |
-| **FP32 baseline** | 4096×4096 | 1.856 | ~74 | Smaller tile — lower utilisation |
+| **FP32 baseline** | 4096×4096 | 1.856 | ~74 | Smaller tile, lower utilisation |
 | **FP16 (after)** | 4096×4096 | 0.442 | ~311 | MFMA FP16 path, **4.20× speedup** |
 
 **What changed:** FP16 activates the CDNA3 matrix core (MFMA) FP16 path, which has 2× the throughput density of FP32 MFMA on gfx942. The additional speedup above 2× comes from halved memory traffic (HBM reads/writes at 16-bit vs 32-bit).
@@ -181,7 +181,7 @@ speedup FP32/FP16: 4.20x
 
 - `rocprof --stats` counter collection: `SQ_WAVES`, `FETCH_SIZE`, `WRITE_SIZE`, `VALUUtilization`
 - Problem-size sweep across 512–16384 to find rocBLAS tile-boundary sweet spots
-- hipBLAS `HGEMM` vs `SGEMM` — direct library call without PyTorch overhead
+- hipBLAS `HGEMM` vs `SGEMM`, direct library call without PyTorch overhead
 - VRAM bandwidth saturation: allocate large tensors and measure HBM read bandwidth against the 5.3 TB/s spec
 - `omniperf` (where available) for per-CU occupancy breakdown
 

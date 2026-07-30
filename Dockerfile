@@ -1,4 +1,4 @@
-# AMD ROCm validation image — mirrors the dnd-amd-8gpu-venu-19mar environment
+# AMD ROCm validation image, mirrors the dnd-amd-8gpu-venu-19mar environment
 FROM rocm/pytorch:rocm6.4_ubuntu24.04_py3.12_pytorch_release_2.4.1
 
 WORKDIR /workspace

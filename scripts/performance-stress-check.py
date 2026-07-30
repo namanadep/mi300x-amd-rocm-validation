@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Performance and Stress Checks
-Based on Report 05 — Performance and Stress Validation
+Based on Report 05, Performance and Stress Validation
 Usage: python performance-stress-check.py [--quick]
   --quick: skip long stress test
 Requires: PyTorch with CUDA/HIP. Run with: /root/pytorchenv/bin/python or torchrun

@@ -1,4 +1,4 @@
-# Peak Load Summary — 8× MI300X VF
+# Peak Load Summary: 8× MI300X VF
 
 **Host:** dnd-amd-8gpu-venu-19mar  
 **Date:** March 19 2026  

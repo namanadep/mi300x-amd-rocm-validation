@@ -1,7 +1,7 @@
 #!/bin/bash
 #
 # GPU/ROCm/PyTorch Health Check Script
-# 8-GPU AMD Ubuntu VM — Quick post-deploy verification
+# 8-GPU AMD Ubuntu VM, quick post-deploy verification
 # Usage: ./gpu-health-check.sh [--pytorch]  (--pytorch requires sudo for /root/pytorchenv)
 #
 

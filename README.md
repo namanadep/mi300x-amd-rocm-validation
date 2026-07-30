@@ -1,14 +1,14 @@
 # mi300x-amd-rocm-validation
 
-**One-line:** Full production-readiness validation suite for 8× AMD Instinct MI300X GPUs — ROCm stack, RCCL collective bandwidth, 1.29 TB memory stress, peak-load thermal, and observability pipeline — run March 19 2026 on `dnd-amd-8gpu-venu-19mar`.
+**One-line:** Full production-readiness validation suite for 8× AMD Instinct MI300X GPUs: ROCm stack, RCCL collective bandwidth, 1.29 TB memory stress, peak-load thermal, and observability pipeline. Run March 19 2026 on `dnd-amd-8gpu-venu-19mar`.
 
 ---
 
 ## Why this exists
 
-Most HPC portfolios cover NVIDIA only. This repo documents hands-on validation of an **AMD MI300X** cluster from first boot through production sign-off: driver stack, RCCL collectives, memory pressure, sustained thermal, and the AMD GPU Prometheus exporter — the equivalent workflow to what NVIDIA infrastructure engineers do with `dcgmi diag` and DCGM exporters.
+Most HPC portfolios cover NVIDIA only. This repo documents hands-on validation of an **AMD MI300X** cluster from first boot through production sign-off: driver stack, RCCL collectives, memory pressure, sustained thermal, and the AMD GPU Prometheus exporter: the equivalent workflow to what NVIDIA infrastructure engineers do with `dcgmi diag` and DCGM exporters.
 
-This is designed as a **bring-up checklist** — the sequence a platform engineer runs before releasing a node to users, not a synthetic demo.
+This is designed as a **bring-up checklist**: the sequence a platform engineer runs before releasing a node to users, not a synthetic demo.
 
 **Related article:** *AMD MI300X vs NVIDIA H200: I Benchmarked Both — Here Are the Actual Numbers* (Medium, Apr 2026).
 
@@ -114,13 +114,13 @@ Formula: Ring all-reduce `total_bytes = 2*(n-1)*size*4`; `Algbw = total_bytes/ti
 | 7 | 0.70 |
 | **Wall time** | **1.6 s** |
 
-Variance < 13% across all 8 GPUs — balanced XGMI topology confirmed.
+Variance < 13% across all 8 GPUs confirms balanced XGMI topology.
 
 ---
 
 ## Observability: AMD GPU Prometheus exporter
 
-The system runs `amd-metrics-exporter` (package: `amdgpu-exporter`) on **port 9400** — the same port convention as NVIDIA's DCGM exporter, enabling drop-in replacement in Prometheus scrape configs.
+The system runs `amd-metrics-exporter` (package: `amdgpu-exporter`) on **port 9400**, the same port convention as NVIDIA's DCGM exporter. This allows drop-in replacement in Prometheus scrape configs.
 
 ```bash
 # Verify exporter is live
@@ -177,13 +177,13 @@ torchrun --nproc_per_node=8 scripts/rccl_allreduce_test.py
 
 ---
 
-## MI300X vs H200 — direct comparison
+## MI300X vs H200: direct comparison
 
 Both systems were measured by the same engineer on real hardware. Numbers are comparable because the workload (FP32 matmul, AllReduce, peak-load thermal) is identical.
 
 | Metric | **AMD MI300X VF** | **NVIDIA H200 NVL** | Notes |
 |--------|-------------------|---------------------|-------|
-| VRAM per GPU | **192 GB HBM3** | 141 GB HBM3e | MI300X +36% — 70B fp16 model fits on 1 GPU |
+| VRAM per GPU | **192 GB HBM3** | 141 GB HBM3e | MI300X +36%; 70B fp16 model fits on 1 GPU |
 | Peak FP32 TFLOPS | **~94.5** | ~46.5 (NVL) · ~51 (SXM) | Single-GPU, 8192×8192 matmul |
 | AllReduce peak (8 GPU) | **433 GB/s algbw** | ~781 GB/s (NVLink) | NVLink has higher peak; XGMI competitive |
 | AllReduce protocol | XGMI (1 hop, full-mesh) | NVLink 4.0 (NV18) | Both in-chassis; no PCIe fallback needed |
@@ -191,7 +191,7 @@ Both systems were measured by the same engineer on real hardware. Numbers are co
 | Peak junction temp | 86°C | 78°C | Both well below throttle threshold |
 | Thermal throttle events | **0** | **0** | Both passed burn-in |
 | Observability exporter | `amd-metrics-exporter :9400` | `dcgm-exporter :9400` | Same port, same Prometheus format |
-| Framework | PyTorch 2.4.1+rocm6.0 | PyTorch 2.5.0 / 2.7.1+cu128 | Code is portable — same `dist.all_reduce` API |
+| Framework | PyTorch 2.4.1+rocm6.0 | PyTorch 2.5.0 / 2.7.1+cu128 | Code is portable; same `dist.all_reduce` API |
 
 **Key takeaway:** MI300X is the right choice when a single GPU needs to hold a full 70B or 180B model for inference. H200 is the right choice for NVLink-scale AllReduce bandwidth in distributed training.
 
@@ -213,7 +213,7 @@ sudo usermod -aG render,video $USER
 # Verify /dev/kfd and /dev/dri/renderD* exist
 ls -la /dev/kfd /dev/dri/render*
 
-# Check IOMMU mode — AMD recommends passthrough for VM guests, but bare-metal
+# Check IOMMU mode. AMD recommends passthrough for VM guests, but bare-metal
 # should have it enabled (iommu=pt in kernel command line)
 cat /proc/cmdline | grep iommu
 dmesg | grep -i iommu | head -5
@@ -239,7 +239,7 @@ hipconfig --full
 ### Stage 3: Topology and XGMI validation
 
 ```bash
-# Show XGMI link topology — all 8 GPUs should show "XGMI" peer access
+# Show XGMI link topology. All 8 GPUs should show "XGMI" peer access
 rocm-smi --showtopo
 
 # Verify peer access (should be 1 hop between all pairs on MI300X)
@@ -295,7 +295,7 @@ These are issues encountered on the `dnd-amd-8gpu-venu-19mar` system. Most are a
 
 ## Validation report index
 
-All 9 validation reports are in `results/reports/` — timestamped, hostname-stamped, real output.
+All 9 validation reports are in `results/reports/`: timestamped, hostname-stamped, real output.
 
 | # | Report | Key finding |
 |---|--------|-------------|
@@ -308,26 +308,26 @@ All 9 validation reports are in `results/reports/` — timestamped, hostname-sta
 | 07 | Monitoring and Observability | amd-metrics-exporter active, :9400 reachable |
 | 08 | Documentation and Handoff | Pre-handoff checklist and recommendations |
 | 09 | Internet Bandwidth | HTTPS blocked (TLS timeout); HTTP works |
-| — | Consolidated Issues | 3 critical, 11 warnings — all documented |
+| - | Consolidated Issues | 3 critical, 11 warnings, all documented |
 
 ---
 
 ## What I learned
 
-- **MI300X has 192 GB HBM3 vs H200's 141 GB** — 36% more memory changes which models fit on a single GPU for inference.
-- **RCCL and NCCL are protocol-compatible** — the same PyTorch `dist.all_reduce` runs on both stacks with no code change; the RCCL backend is selected by the ROCm-built PyTorch.
-- **AMD metrics exporter mirrors DCGM exporter convention** (port 9400, Prometheus format) — a dual-vendor observability stack is straightforward.
-- **Thermal margin is comfortable at full load** — 86°C junction peak with 0 throttle events; MI300X TDP is 750W and the system held it without frequency drop.
-- **XGMI variance < 13% across 8 GPUs** — confirms healthy full-mesh topology; asymmetric numbers here would indicate a faulty link or NUMA affinity issue.
+- **MI300X has 192 GB HBM3 vs H200's 141 GB.** That's 36% more memory, which changes which models fit on a single GPU for inference.
+- **RCCL and NCCL are protocol-compatible.** The same PyTorch `dist.all_reduce` runs on both stacks with no code change; the RCCL backend is selected by the ROCm-built PyTorch.
+- **AMD metrics exporter mirrors DCGM exporter convention** (port 9400, Prometheus format), so a dual-vendor observability stack is straightforward to run.
+- **Thermal margin holds at full load.** 86°C junction peak with 0 throttle events; MI300X TDP is 750W and the system held it without frequency drop.
+- **XGMI variance stays under 13% across 8 GPUs.** This confirms a healthy full-mesh topology; asymmetric numbers here would indicate a faulty link or NUMA affinity issue.
 
 ---
 
 ## Production relevance
 
-- **Acceptance testing** — these scripts are the AMD equivalent of `dcgmi diag -r 3`: run before handing a node to a customer.
-- **Burn-in** — the 55-second training loop and peak-load test identify cooling and power delivery issues before production.
-- **Dual-vendor observability** — AMD exporter on :9400 slots into existing DCGM Prometheus pipelines with a one-line scrape config change.
-- **LLM inference capacity planning** — 1.54 TB total VRAM across 8 GPUs means a 70B parameter model (fp16, ~140 GB) fits on a single MI300X with memory to spare.
+- **Acceptance testing:** these scripts are the AMD equivalent of `dcgmi diag -r 3`, run before handing a node to a customer.
+- **Burn-in:** the 55-second training loop and peak-load test identify cooling and power delivery issues before production.
+- **Dual-vendor observability:** AMD exporter on :9400 slots into existing DCGM Prometheus pipelines with a one-line scrape config change.
+- **LLM inference capacity planning:** 1.54 TB total VRAM across 8 GPUs means a 70B parameter model (fp16, ~140 GB) fits on a single MI300X with memory to spare.
 
 ---
 
